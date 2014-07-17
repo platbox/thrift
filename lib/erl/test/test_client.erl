@@ -21,7 +21,7 @@
 
 -export([start/0, start/1]).
 
--include("thriftTest_types.hrl").
+-include("thrift_test_thriftTest_types.hrl").
 
 -record(options, {port = 9090,
                   client_opts = []}).

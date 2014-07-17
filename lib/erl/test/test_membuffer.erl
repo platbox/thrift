@@ -22,7 +22,7 @@
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
--include("thriftTest_types.hrl").
+-include("thrift_test_thriftTest_types.hrl").
 
 test_data() ->
   #xtruct {
@@ -37,10 +37,10 @@ encode_decode_1_test() ->
   {ok, Protocol0} = thrift_binary_protocol:new(Transport),
   TestData = test_data(),
   {Protocol1, ok} = thrift_protocol:write(Protocol0,
-    {{struct, element(2, thriftTest_types:struct_info('xtruct'))},
+    {{struct, element(2, thrift_test_thriftTest_types:struct_info('xtruct'))},
       TestData}),
   {_Protocol2, {ok, Result}} = thrift_protocol:read(Protocol1,
-    {struct, element(2, thriftTest_types:struct_info('xtruct'))},
+    {struct, element(2, thrift_test_thriftTest_types:struct_info('xtruct'))},
     'xtruct'),
   Result = TestData.
 
@@ -49,10 +49,10 @@ encode_decode_2_test() ->
   {ok, Protocol0} = thrift_binary_protocol:new(Transport),
   TestData = test_data(),
   {Protocol1, ok} = thrift_protocol:write(Protocol0,
-    {{struct, element(2, thriftTest_types:struct_info('xtruct'))},
+    {{struct, element(2, thrift_test_thriftTest_types:struct_info('xtruct'))},
       TestData}),
   {_Protocol2, {ok, Result}} = thrift_protocol:read(Protocol1,
-    {struct, element(2, thriftTest_types:struct_info('xtruct3'))},
+    {struct, element(2, thrift_test_thriftTest_types:struct_info('xtruct3'))},
     'xtruct3'),
 
   Result = #xtruct3{string_thing = TestData#xtruct.string_thing,
@@ -66,10 +66,10 @@ encode_decode_3_test() ->
   {ok, Protocol0} = thrift_binary_protocol:new(Transport),
   TestData = #bools{im_true = true, im_false = false},
   {Protocol1, ok} = thrift_protocol:write(Protocol0,
-    {{struct, element(2, thriftTest_types:struct_info('bools'))},
+    {{struct, element(2, thrift_test_thriftTest_types:struct_info('bools'))},
       TestData}),
   {_Protocol2, {ok, Result}} = thrift_protocol:read(Protocol1,
-    {struct, element(2, thriftTest_types:struct_info('bools'))},
+    {struct, element(2, thrift_test_thriftTest_types:struct_info('bools'))},
     'bools'),
 
   true = TestData#bools.im_true  =:= Result#bools.im_true,
@@ -79,12 +79,12 @@ encode_decode_3_test() ->
 encode_decode_4_test() ->
   {ok, Transport} = thrift_memory_buffer:new(),
   {ok, Protocol0} = thrift_binary_protocol:new(Transport),
-  TestData = #insanity{xtructs=[]},
+  TestData = #insanity{userMap = #{one => 42, three => 1337}, xtructs=[]},
   {Protocol1, ok} = thrift_protocol:write(Protocol0,
-    {{struct, element(2, thriftTest_types:struct_info('insanity'))},
+    {{struct, element(2, thrift_test_thriftTest_types:struct_info('insanity'))},
       TestData}),
   {_Protocol2, {ok, Result}} = thrift_protocol:read(Protocol1,
-    {struct, element(2, thriftTest_types:struct_info('insanity'))},
+    {struct, element(2, thrift_test_thriftTest_types:struct_info('insanity'))},
     'insanity'),
 
   TestData = Result.
@@ -98,7 +98,7 @@ encode_decode_5_test() ->
   {ok, Protocol0} = thrift_binary_protocol:new(Transport0),
   TestData = test_data(),
   {Protocol1, ok} = thrift_protocol:write(Protocol0,
-    {{struct, element(2, thriftTest_types:struct_info('xtruct'))},
+    {{struct, element(2, thrift_test_thriftTest_types:struct_info('xtruct'))},
       TestData}),
   % flush now returns the buffer
   {_Protocol2, Buf} = thrift_protocol:flush_transport (Protocol1),
@@ -107,9 +107,22 @@ encode_decode_5_test() ->
   {ok, T2} = thrift_memory_buffer:new (Buf),
   {ok, P2} = thrift_binary_protocol:new(T2),
   {_, {ok, Result}} = thrift_protocol:read(P2,
-    {struct, element(2, thriftTest_types:struct_info('xtruct'))},
+    {struct, element(2, thrift_test_thriftTest_types:struct_info('xtruct'))},
     'xtruct'),
 
   Result = TestData.
+
+encode_decode_6_test() ->
+  {ok, Transport} = thrift_memory_buffer:new(),
+  {ok, Protocol0} = thrift_binary_protocol:new(Transport),
+  TestData = #crazyNesting{set_field = ordsets:from_list([#insanity{userMap = #{one => 1}}, #insanity{}])},
+  {Protocol1, ok} = thrift_protocol:write(Protocol0,
+    {{struct, element(2, thrift_test_thriftTest_types:struct_info('crazyNesting'))},
+      TestData}),
+  {_Protocol2, {ok, Result}} = thrift_protocol:read(Protocol1,
+    {struct, element(2, thrift_test_thriftTest_types:struct_info('crazyNesting'))},
+    'crazyNesting'),
+
+  ?assertEqual(TestData, Result).
 
 -endif.

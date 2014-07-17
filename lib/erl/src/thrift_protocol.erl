@@ -82,6 +82,7 @@ term_to_typeid(i16) -> ?tType_I16;
 term_to_typeid(i32) -> ?tType_I32;
 term_to_typeid(i64) -> ?tType_I64;
 term_to_typeid(string) -> ?tType_STRING;
+term_to_typeid({enum, _}) -> ?tType_I32;
 term_to_typeid({struct, _}) -> ?tType_STRUCT;
 term_to_typeid({map, _, _}) -> ?tType_MAP;
 term_to_typeid({set, _}) -> ?tType_SET;
@@ -132,6 +133,14 @@ read(IProto, {struct, {Module, StructureName}}) when is_atom(Module),
 read(IProto, S={struct, Structure}) when is_list(Structure) ->
     read(IProto, S, undefined);
 
+read(IProto, {enum, {Module, EnumName}}) when is_atom(Module) ->
+    read(IProto, Module:enum_info(EnumName));
+
+read(IProto, {enum, Fields}) when is_list(Fields) ->
+    {IProto2, {ok, IVal}} = read(IProto, i32),
+    {EnumVal, IVal} = lists:keyfind(IVal, 2, Fields),
+    {IProto2, {ok, EnumVal}};
+
 read(IProto0, {list, Type}) ->
     {IProto1, #protocol_list_begin{etype = EType, size = Size}} =
         read(IProto0, list_begin),
@@ -150,15 +159,15 @@ read(IProto0, {map, KeyType, ValType}) ->
         read(IProto0, map_begin),
     {KType, KType} = {term_to_typeid(KeyType), KType},
     {VType, VType} = {term_to_typeid(ValType), VType},
-    {List, IProto2} = lists:mapfoldl(fun(_, ProtoS0) ->
+    {Map, IProto2} = lists:foldl(fun(_, {M, ProtoS0}) ->
                                              {ProtoS1, {ok, Key}} = read(ProtoS0, KeyType),
                                              {ProtoS2, {ok, Val}} = read(ProtoS1, ValType),
-                                             {{Key, Val}, ProtoS2}
+                                             {maps:put(Key, Val, M), ProtoS2}
                                      end,
-                                     IProto1,
+                                     {#{}, IProto1},
                                      lists:duplicate(Size, 0)),
     {IProto3, ok} = read(IProto2, map_end),
-    {IProto3, {ok, dict:from_list(List)}};
+    {IProto3, {ok, Map}};
 
 read(IProto0, {set, Type}) ->
     {IProto1, #protocol_set_begin{etype = EType, size = Size}} =
@@ -171,7 +180,7 @@ read(IProto0, {set, Type}) ->
                                      IProto1,
                                      lists:duplicate(Size, 0)),
     {IProto3, ok} = read(IProto2, set_end),
-    {IProto3, {ok, sets:from_list(List)}};
+    {IProto3, {ok, ordsets:from_list(List)}};
 
 read(Protocol, ProtocolType) ->
     read_specific(Protocol, ProtocolType).
@@ -334,6 +343,15 @@ write(_, {{struct, {Module, StructureName}}, Data})
     erlang:error(struct_unmatched, {{provided, element(1, Data)},
                              {expected, StructureName}});
 
+write(Proto, {{enum, Fields}, Data}) when is_list(Fields), is_atom(Data) ->
+    {Data, IVal} = lists:keyfind(Data, 1, Fields),
+    write(Proto, {i32, IVal});
+
+write(Proto, {{enum, {Module, EnumName}}, Data})
+  when is_atom(Module),
+       is_atom(EnumName) ->
+    write(Proto, {Module:enum_info(EnumName), Data});
+
 write(Proto0, {{list, Type}, Data})
   when is_list(Data) ->
     {Proto1, ok} = write(Proto0,
@@ -355,9 +373,9 @@ write(Proto0, {{map, KeyType, ValType}, Data}) ->
                          #protocol_map_begin{
                            ktype = term_to_typeid(KeyType),
                            vtype = term_to_typeid(ValType),
-                           size  = dict:size(Data)
+                           size  = map_size(Data)
                           }),
-    Proto2 = dict:fold(fun(KeyData, ValData, ProtoS0) ->
+    Proto2 = maps:fold(fun(KeyData, ValData, ProtoS0) ->
                                {ProtoS1, ok} = write(ProtoS0, {KeyType, KeyData}),
                                {ProtoS2, ok} = write(ProtoS1, {ValType, ValData}),
                                ProtoS2
@@ -368,13 +386,13 @@ write(Proto0, {{map, KeyType, ValType}, Data}) ->
     {Proto3, ok};
 
 write(Proto0, {{set, Type}, Data}) ->
-    true = sets:is_set(Data),
+    true = ordsets:is_set(Data),
     {Proto1, ok} = write(Proto0,
                          #protocol_set_begin{
                            etype = term_to_typeid(Type),
-                           size  = sets:size(Data)
+                           size  = ordsets:size(Data)
                           }),
-    Proto2 = sets:fold(fun(Elem, ProtoIn) ->
+    Proto2 = ordsets:fold(fun(Elem, ProtoIn) ->
                                {ProtoOut, ok} = write(ProtoIn, {Type, Elem}),
                                ProtoOut
                        end,

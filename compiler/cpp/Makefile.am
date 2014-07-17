@@ -76,7 +76,7 @@ thrift_SOURCES += src/generate/t_c_glib_generator.cc \
                   src/generate/t_rb_generator.cc \
                   src/generate/t_perl_generator.cc \
                   src/generate/t_php_generator.cc \
-                  src/generate/t_erl_generator.cc \
+                  src/generate/t_erl_v2_generator.cc \
                   src/generate/t_cocoa_generator.cc \
                   src/generate/t_st_generator.cc \
                   src/generate/t_ocaml_generator.cc \
