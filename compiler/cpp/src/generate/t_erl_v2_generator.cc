@@ -599,7 +599,7 @@ string t_erl_generator::render_type(t_type * type) {
   } else if (tp->is_enum()) {
     return "atom()";
   } else if (tp->is_struct() || tp->is_xception()) {
-    return "#" + uncapitalize(tp->get_name()) + "{}";
+    return uncapitalize(tp->get_name()) + "()";
   } else if (tp->is_map()) {
     t_map * tmap = static_cast<t_map *>(tp);
     return "#{" + render_type(tmap->get_key_type()) + " => " + render_type(tmap->get_val_type()) + "}";
@@ -674,6 +674,11 @@ void t_erl_generator::generate_erl_struct_definition(ostream& out, t_struct* tst
   indent(buf) << "}).";
 
   out << buf.str() << endl << endl;
+
+  out <<
+    "-type " << type_name(tstruct) << "() :: #" + type_name(tstruct) + "{}."
+      << endl << endl;
+
 }
 
 /**
