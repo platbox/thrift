@@ -79,6 +79,7 @@ class t_erl_generator : public t_generator {
   void generate_enum_info(std::ostream& buf, t_enum* tenum);
   void generate_member_type(std::ostream & out, t_type* type);
   void generate_member_value(std::ostream & out, t_type* type, t_const_value* value);
+  void generate_typespecs(std::ostream & out, bool with_extended);
 
   std::string render_member_type(t_field * field);
   std::string render_member_value(t_field * field);
@@ -348,14 +349,21 @@ void t_erl_generator::close_generator() {
   export_types_string("struct_info", 1);
   export_types_string("struct_info_ext", 1);
 
+  generate_typespecs(f_types_file_, true);
+
+  f_types_file_ << "-type enum_value_info() :: {atom(), integer()}." << endl << endl;
+
   f_types_file_ << "-export([" << export_types_lines_.str() << "])." << endl << endl;
 
+  f_types_file_ << "-spec enum_info(atom()) -> {enum, [enum_value_info()]}." << endl << endl;
   f_types_file_ << f_enum_info_.str();
   f_types_file_ << "enum_info('i am a dummy enum') -> undefined." << endl << endl;
 
+  f_types_file_ << "-spec struct_info(atom()) -> {struct, [struct_field_info()]}." << endl << endl;
   f_types_file_ << f_info_.str();
   f_types_file_ << "struct_info('i am a dummy struct') -> undefined." << endl << endl;
 
+  f_types_file_ << "-spec struct_info_ext(atom()) -> {struct, [struct_field_info_ext()]}." << endl << endl;
   f_types_file_ << f_info_ext_.str();
   f_types_file_ << "struct_info_ext('i am a dummy struct') -> undefined." << endl << endl;
 
@@ -364,6 +372,36 @@ void t_erl_generator::close_generator() {
   f_types_file_.close();
   f_types_hrl_file_.close();
   f_consts_.close();
+}
+
+void t_erl_generator::generate_typespecs(std::ostream& os, bool with_extended) {
+
+  os << "-type type_ref() :: {module(), atom()}." << endl;
+  os << "-type field_num() :: pos_integer()." << endl;
+
+  if (with_extended) {
+    os << "-type field_name() :: atom()." << endl;
+    os << "-type field_req() :: required | optional." << endl;
+  }
+
+  os << "-type field_type() ::" << endl;
+  indent_up();
+  indent(os) << "bool | byte | i16 | i32 | i64 | string | double |" << endl;
+  indent(os) << "{enum, type_ref()} |" << endl;
+  indent(os) << "{struct, type_ref()} |" << endl;
+  indent(os) << "{list, field_type()} |" << endl;
+  indent(os) << "{set, field_type()} |" << endl;
+  indent(os) << "{map, field_type(), field_type()}." << endl << endl;
+  indent_down();
+
+  os << "-type struct_field_info() :: {field_num(), field_type()}." << endl;
+
+  if (with_extended) {
+    os << "-type struct_field_info_ext() :: {field_num(), field_req(), field_type(), field_name(), any()}." << endl;
+  }
+
+  os << endl;
+
 }
 
 /**
@@ -827,6 +865,13 @@ void t_erl_generator::generate_erl_function_helpers(t_function* tfunction) {
 void t_erl_generator::generate_service_interface(t_service* tservice) {
 
   export_string("function_info", 2);
+
+  generate_typespecs(f_service_, false);
+
+  f_service_ << "-type function_info() :: params_type | reply_type | exceptions."
+    << endl << endl;
+  f_service_ << "-spec function_info(atom(), function_info()) -> {struct, [struct_field_info()]} | no_function."
+    << endl << endl;
 
   vector<t_function*> functions = tservice->get_functions();
   vector<t_function*>::iterator f_iter;
