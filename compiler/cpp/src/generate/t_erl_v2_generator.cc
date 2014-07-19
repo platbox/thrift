@@ -801,6 +801,7 @@ void t_erl_generator::generate_service(t_service* tservice) {
   export_lines_first_ = true;
 
   f_service_hrl_ << hrl_header(service_module);
+  f_service_hrl_ << "-include(\"" << ns << program_name_ << "_types.hrl\")." << endl;
 
   if (tservice->get_extends() != NULL) {
     t_service * ext = tservice->get_extends();
