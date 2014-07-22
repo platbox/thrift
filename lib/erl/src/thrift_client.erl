@@ -142,7 +142,6 @@ handle_application_exception(Client = #tclient{protocol = Proto0}) ->
     {Proto2, ok} = thrift_protocol:read(Proto1, message_end),
     XRecord = list_to_tuple(
                 ['TApplicationException' | tuple_to_list(Exception)]),
-    error_logger:error_msg("X: ~p~n", [XRecord]),
     true = is_record(XRecord, 'TApplicationException'),
     NewClient = Client#tclient{protocol = Proto2},
     throw({NewClient, {exception, XRecord}}).
