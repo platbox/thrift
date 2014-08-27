@@ -264,7 +264,7 @@ skip_struct_loop(Proto0) ->
         ?tType_STOP ->
             {Proto1, ok};
         _Else ->
-            {Proto2, ok} = skip(Proto1, Type),
+            {Proto2, ok} = skip(Proto1, thrift_protocol:typeid_to_atom(Type)),
             {Proto3, ok} = read(Proto2, field_end),
             skip_struct_loop(Proto3)
     end.
