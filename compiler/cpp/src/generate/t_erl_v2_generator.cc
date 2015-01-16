@@ -885,10 +885,12 @@ void t_erl_generator::generate_service_interface(t_service* tservice) {
   }
 
   // Inheritance - pass unknown functions to base class
-  if (tservice->get_extends() != NULL) {
+  t_service *ext = tservice->get_extends();
+  if (ext != NULL) {
       indent(f_service_) << "function_info(Function, InfoType) ->" << endl;
       indent_up();
-      indent(f_service_) << uncapitalize(tservice->get_extends()->get_name())
+      indent(f_service_) << get_ns_prefix(ext->get_program())
+                         << uncapitalize(ext->get_name())
                          << "_service:function_info(Function, InfoType)." << endl << endl;
       indent_down();
   } else {
